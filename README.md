@@ -1,5 +1,7 @@
 # Proxmox Homelab Monitor
 
+<img src="custom_components/proxmox_homelab_monitor/brand/icon@2x.png" alt="Logo" width="128">
+
 **Ein Fork von [Proxmox VE Custom](https://github.com/dougiteixeira/proxmoxve) von [@dougiteixeira](https://github.com/dougiteixeira)** mit zusätzlicher Überwachung der Domains, unter denen deine Dienste erreichbar sind. Alles, was Proxmox VE Custom kann, ist unverändert enthalten. Dazu kommt:
 
 - **Domain pro Container/VM:** in den Optionen unter *Domains der Dienste* eintragen, z. B. `jellyfin.example.org`
