@@ -1,3 +1,26 @@
+# Proxmox Homelab Monitor
+
+**Ein Fork von [Proxmox VE Custom](https://github.com/dougiteixeira/proxmoxve) von [@dougiteixeira](https://github.com/dougiteixeira)** mit zusätzlicher Überwachung der Domains, unter denen deine Dienste erreichbar sind. Alles, was Proxmox VE Custom kann, ist unverändert enthalten. Dazu kommt:
+
+- **Domain pro Container/VM:** in den Optionen unter *Domains der Dienste* eintragen, z. B. `jellyfin.example.org`
+- **`binary_sensor.<gast>_domain`:** Domain erreichbar (HTTP 1xx–4xx), mit HTTP-Code, Fehler und Zeitpunkt der letzten Prüfung
+- **`sensor.<gast>_response_time`:** Antwortzeit in ms, mit Verlauf
+- **`binary_sensor.<gast>_service`:** Gesamtstatus für jeden Container/jede VM: läuft *und* Domain erreichbar. Attribute `problem` (`offline`, `unavailable`, `domain`) und `message` für Benachrichtigungen
+- **`sensor.homelab_<node>_problems`:** Anzahl der Dienste mit Problem, Liste als Attribut
+- Prüfung serverseitig rund um die Uhr; einstellbar sind Intervall, Zeitlimit, Zertifikatsprüfung und wie viele Fehlschläge hintereinander als „nicht erreichbar“ zählen (gegen Fehlalarme)
+
+Passende Lovelace-Karten: [Homelab Status Card](https://github.com/FluxLP/homelab-status-card) und [Homelab Status Compact](https://github.com/FluxLP/homelab-status-compact).
+
+> Die Integration nutzt die Domain `proxmox_homelab_monitor` und kann parallel zu Proxmox VE Custom installiert werden. Damit Entitäts-IDs gleich bleiben, beim Umstieg erst den Proxmox-VE-Custom-Eintrag löschen und dann denselben Host hier hinzufügen. Die Aktion heißt hier `proxmox_homelab_monitor.backup`.
+
+Installation über HACS: *Benutzerdefinierte Repositories* → `https://github.com/FluxLP/proxmox-homelab-monitor`, Typ **Integration**.
+
+Lizenz: MIT, wie das Original. Copyright der übernommenen Teile bei den Autoren von Proxmox VE Custom.
+
+---
+
+*Die folgende Dokumentation stammt aus dem Original und gilt für alle übernommenen Funktionen (dort heißt die Domain `proxmoxve`).*
+
 # Proxmox VE Custom Integration for Home Assistant
 
 <picture>
