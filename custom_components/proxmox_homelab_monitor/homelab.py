@@ -22,7 +22,7 @@ from __future__ import annotations
 import asyncio
 import re
 import time
-from dataclasses import dataclass, replace
+from dataclasses import dataclass
 from datetime import datetime, timedelta
 from typing import TYPE_CHECKING, Any
 
@@ -31,14 +31,17 @@ import voluptuous as vol
 from homeassistant.components.binary_sensor import (
     BinarySensorDeviceClass,
     BinarySensorEntity,
+    BinarySensorEntityDescription,
 )
 from homeassistant.components.sensor import (
     SensorDeviceClass,
     SensorEntity,
+    SensorEntityDescription,
     SensorStateClass,
 )
 from homeassistant.const import EntityCategory, UnitOfTime
 from homeassistant.core import callback
+from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers import selector
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.device_registry import DeviceInfo
@@ -79,18 +82,31 @@ PROBLEM_OFFLINE = "offline"
 PROBLEM_UNAVAILABLE = "unavailable"
 PROBLEM_DOMAIN = "domain"
 
+ERROR_TIMEOUT = "timeout"
+ERROR_SSL = "ssl"
+ERROR_DNS = "dns"
+ERROR_CONNECTION = "connection"
+
 MESSAGES = {
     "de": {
         PROBLEM_OFFLINE: "ist offline",
         PROBLEM_UNAVAILABLE: "Status nicht verfügbar",
         PROBLEM_DOMAIN: "Domain nicht erreichbar",
         "ok": "In Betrieb",
+        ERROR_TIMEOUT: "Zeitüberschreitung",
+        ERROR_SSL: "Zertifikatsfehler",
+        ERROR_DNS: "DNS-Fehler",
+        ERROR_CONNECTION: "keine Verbindung",
     },
     "en": {
         PROBLEM_OFFLINE: "is offline",
         PROBLEM_UNAVAILABLE: "status unavailable",
         PROBLEM_DOMAIN: "domain unreachable",
         "ok": "Running",
+        ERROR_TIMEOUT: "timeout",
+        ERROR_SSL: "certificate error",
+        ERROR_DNS: "DNS error",
+        ERROR_CONNECTION: "no connection",
     },
 }
 
@@ -132,6 +148,7 @@ class CheckResult:
     http_status: int | None
     response_time_ms: int | None
     error: str | None
+    error_detail: str | None
     failures: int
     checked_at: datetime
 
@@ -155,8 +172,8 @@ class HomelabDomainCoordinator(DataUpdateCoordinator[dict[str, CheckResult]]):
         self._session = async_get_clientsession(hass, verify_ssl=bool(options[CONF_HOMELAB_VERIFY_SSL]))
         self._failures: dict[str, int] = {}
 
-    async def _check(self, url: str) -> tuple[int | None, int | None, str | None]:
-        """Return (status, milliseconds, error) for one URL."""
+    async def _check(self, url: str) -> tuple[int | None, int | None, str | None, str | None]:
+        """Return (status, milliseconds, error code, error detail) for one URL."""
         start = time.monotonic()
         try:
             async with asyncio.timeout(self._timeout):
@@ -167,12 +184,16 @@ class HomelabDomainCoordinator(DataUpdateCoordinator[dict[str, CheckResult]]):
                 ) as response:
                     status = response.status
         except TimeoutError:
-            return None, None, "timeout"
+            return None, None, ERROR_TIMEOUT, f"no answer within {self._timeout} s"
         except aiohttp.ClientSSLError as err:
-            return None, None, f"ssl: {err}"
+            return None, None, ERROR_SSL, str(err)
+        except aiohttp.ClientConnectorDNSError as err:
+            return None, None, ERROR_DNS, str(err)
+        except aiohttp.ClientConnectorError as err:
+            return None, None, ERROR_CONNECTION, str(err)
         except aiohttp.ClientError as err:
-            return None, None, f"{type(err).__name__}: {err}"
-        return status, round((time.monotonic() - start) * 1000), None
+            return None, None, ERROR_CONNECTION, f"{type(err).__name__}: {err}"
+        return status, round((time.monotonic() - start) * 1000), None, None
 
     async def _async_update_data(self) -> dict[str, CheckResult]:
         """Check all domains in parallel. A failing domain never fails the update."""
@@ -181,7 +202,7 @@ class HomelabDomainCoordinator(DataUpdateCoordinator[dict[str, CheckResult]]):
         previous = self.data or {}
         now = dt_util.utcnow()
         data: dict[str, CheckResult] = {}
-        for key, (status, millis, error) in zip(keys, outcomes, strict=True):
+        for key, (status, millis, error, detail) in zip(keys, outcomes, strict=True):
             raw_ok = status is not None and 0 < status < 500
             failures = 0 if raw_ok else self._failures.get(key, 0) + 1
             self._failures[key] = failures
@@ -196,6 +217,7 @@ class HomelabDomainCoordinator(DataUpdateCoordinator[dict[str, CheckResult]]):
                 http_status=status,
                 response_time_ms=millis,
                 error=error,
+                error_detail=detail,
                 failures=failures,
                 checked_at=now,
             )
@@ -210,6 +232,21 @@ async def async_setup_homelab(hass: HomeAssistant, config_entry: ConfigEntry) ->
     else:
         coordinator.data = {}
     config_entry.runtime_data[HOMELAB] = coordinator
+    _async_remove_orphans(hass, config_entry, coordinator.urls)
+
+
+_ORPHAN_RE = re.compile(r"_(QEMU|LXC)_(\d+)_homelab_(domain|response_time)$")
+
+
+@callback
+def _async_remove_orphans(hass: HomeAssistant, config_entry: ConfigEntry, urls: dict[str, str]) -> None:
+    """Drop domain and response time entities of guests whose domain was removed."""
+    registry = er.async_get(hass)
+    for entry in er.async_entries_for_config_entry(registry, config_entry.entry_id):
+        match = _ORPHAN_RE.search(entry.unique_id or "")
+        if match and f"{match.group(1).lower()}_{match.group(2)}" not in urls:
+            LOGGER.debug("Homelab: removing %s, its domain is no longer configured", entry.entity_id)
+            registry.async_remove(entry.entity_id)
 
 
 # ---------------------------------------------------------------------------
@@ -254,7 +291,12 @@ def guest_status(hass: HomeAssistant, config_entry: ConfigEntry, api_category: P
         problem = PROBLEM_DOMAIN
 
     if problem == PROBLEM_DOMAIN:
-        detail = f" (HTTP {check.http_status})" if check and check.http_status else (f" ({check.error})" if check and check.error else "")
+        if check and check.http_status:
+            detail = f" (HTTP {check.http_status})"
+        elif check and check.error:
+            detail = f" ({msgs.get(check.error, check.error)})"
+        else:
+            detail = ""
         message = f"{name}: {msgs[PROBLEM_DOMAIN]}{detail}"
     elif problem:
         message = f"{name} {msgs[problem]}" if problem == PROBLEM_OFFLINE else f"{name}: {msgs[problem]}"
@@ -270,6 +312,7 @@ def guest_status(hass: HomeAssistant, config_entry: ConfigEntry, api_category: P
         "url": url or None,
         "domain_ok": None if not url or check is None else check.ok,
         "http_status": check.http_status if check else None,
+        "error": check.error if check else None,
         "problem": problem,
         "message": message,
     }
@@ -283,17 +326,30 @@ def _guest_device(config_entry: ConfigEntry, api_category: ProxmoxType, vmid: st
 # ---------------------------------------------------------------------------
 # Entitäten
 # ---------------------------------------------------------------------------
+@dataclass(frozen=True, kw_only=True)
+class HomelabBinarySensorDescription(ProxmoxEntityDescription, BinarySensorEntityDescription):
+    """Description of a homelab binary sensor."""
+
+
+@dataclass(frozen=True, kw_only=True)
+class HomelabSensorDescription(ProxmoxEntityDescription, SensorEntityDescription):
+    """Description of a homelab sensor."""
+
+
 class HomelabEntity(ProxmoxEntity):
     """Base for the homelab entities: suggests readable English entity ids."""
 
     _homelab_item: str = ""
+    # Die Plattform liest Felder aus der Beschreibung (z. B. die Einheit),
+    # daher braucht jede Plattform ihre eigene Beschreibungsklasse.
+    _description_cls: type[ProxmoxEntityDescription] = ProxmoxEntityDescription
 
     def __init__(self, coordinator: DataUpdateCoordinator, config_entry: ConfigEntry, unique_id: str, translation_key: str) -> None:
         """Initialize with a translated name."""
         super().__init__(
             coordinator,
             unique_id,
-            ProxmoxEntityDescription(key=translation_key, translation_key=translation_key),
+            self._description_cls(key=translation_key, translation_key=translation_key),
         )
         self._config_entry = config_entry
         self._homelab_item = translation_key
@@ -344,6 +400,8 @@ class HomelabGuestEntity(HomelabEntity):
 class HomelabServiceBinarySensor(HomelabGuestEntity, BinarySensorEntity):
     """Overall state: guest running and, if configured, domain reachable."""
 
+    _description_cls = HomelabBinarySensorDescription
+
     _attr_device_class = BinarySensorDeviceClass.RUNNING
 
     def __init__(self, config_entry: ConfigEntry, api_category: ProxmoxType, vmid: str) -> None:
@@ -372,6 +430,8 @@ class HomelabServiceBinarySensor(HomelabGuestEntity, BinarySensorEntity):
 
 class HomelabDomainBinarySensor(HomelabGuestEntity, BinarySensorEntity):
     """Domain reachable."""
+
+    _description_cls = HomelabBinarySensorDescription
 
     _attr_device_class = BinarySensorDeviceClass.CONNECTIVITY
 
@@ -405,6 +465,7 @@ class HomelabDomainBinarySensor(HomelabGuestEntity, BinarySensorEntity):
             "http_status": check.http_status,
             "response_time_ms": check.response_time_ms,
             "error": check.error,
+            "error_detail": check.error_detail,
             "consecutive_failures": check.failures,
             "last_check": check.checked_at.isoformat(),
         }
@@ -412,6 +473,8 @@ class HomelabDomainBinarySensor(HomelabGuestEntity, BinarySensorEntity):
 
 class HomelabResponseTimeSensor(HomelabGuestEntity, SensorEntity):
     """Response time of the domain."""
+
+    _description_cls = HomelabSensorDescription
 
     _attr_device_class = SensorDeviceClass.DURATION
     _attr_state_class = SensorStateClass.MEASUREMENT
@@ -438,6 +501,8 @@ class HomelabResponseTimeSensor(HomelabGuestEntity, SensorEntity):
 class HomelabProblemsSensor(HomelabEntity, SensorEntity):
     """Number of guests with a problem, on the cluster device."""
 
+    _description_cls = HomelabSensorDescription
+
     _attr_state_class = SensorStateClass.MEASUREMENT
 
     def __init__(self, config_entry: ConfigEntry) -> None:
@@ -449,6 +514,9 @@ class HomelabProblemsSensor(HomelabEntity, SensorEntity):
             "problems",
         )
         self._attr_device_info = DeviceInfo(identifiers={(DOMAIN, f"{config_entry.entry_id}_cluster")})
+        # Mehrere Einträge haben alle ein Gerät "Proxmox Cluster": der Node-Name unterscheidet sie
+        nodes = selected(config_entry, "nodes", None)
+        self._attr_translation_placeholders = {"node": ", ".join(nodes) or config_entry.title}
 
     def _suggested_object_id(self) -> str | None:
         nodes = selected(self._config_entry, "nodes", None)
@@ -480,7 +548,7 @@ class HomelabProblemsSensor(HomelabEntity, SensorEntity):
         """List of the problems and the total."""
         statuses = self._statuses
         problems = [
-            {k: s[k] for k in ("service_name", "type", "vmid", "problem", "http_status", "url", "message")}
+            {k: s[k] for k in ("service_name", "type", "vmid", "problem", "http_status", "error", "url", "message")}
             for s in statuses
             if s["problem"]
         ]

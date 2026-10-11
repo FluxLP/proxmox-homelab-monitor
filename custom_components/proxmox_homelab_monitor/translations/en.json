@@ -361,7 +361,7 @@
       },
       "sensor": {
         "response_time": {"name": "Response time"},
-        "problems": {"name": "Problems"},
+        "problems": {"name": "Problems ({node})"},
         "cpu_used": {
           "name": "CPU used",
           "state_attributes": {

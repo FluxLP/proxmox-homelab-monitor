@@ -796,7 +796,7 @@
                 "name": "Antwortzeit"
             },
             "problems": {
-                "name": "Probleme"
+                "name": "Probleme ({node})"
             }
         },
         "update": {

@@ -1,0 +1,91 @@
+blueprint:
+  name: Proxmox Homelab Monitor – Benachrichtigung bei Ausfall
+  description: >-
+    Schickt eine Push-Nachricht aufs Handy, wenn ein Dienst ausfällt (Container/VM
+    offline oder Domain nicht erreichbar) und optional, wenn er wieder läuft.
+    Wähle dafür die **Dienst**-Entitäten der Proxmox Homelab Monitor Integration
+    (z. B. `binary_sensor.lxc_jellyfin_100_service`).
+  domain: automation
+  source_url: https://github.com/FluxLP/proxmox-homelab-monitor/blob/main/blueprints/service_alert.yaml
+  input:
+    services:
+      name: Dienste
+      description: Die Dienst-Entitäten, die überwacht werden sollen.
+      selector:
+        entity:
+          multiple: true
+          filter:
+            - integration: proxmox_homelab_monitor
+              domain: binary_sensor
+              device_class: running
+    notify_device:
+      name: Handy
+      description: Gerät mit der Home-Assistant-App, das die Nachricht bekommt.
+      selector:
+        device:
+          filter:
+            - integration: mobile_app
+    delay:
+      name: Verzögerung
+      description: So lange muss ein Dienst ausgefallen sein, bevor eine Nachricht kommt. Verhindert Meldungen bei kurzen Neustarts.
+      default:
+        minutes: 2
+      selector:
+        duration: {}
+    notify_recovery:
+      name: Auch melden, wenn der Dienst wieder läuft
+      default: true
+      selector:
+        boolean: {}
+
+mode: queued
+max: 20
+
+triggers:
+  - trigger: state
+    entity_id: !input services
+    from: "on"
+    to: "off"
+    for: !input delay
+    id: down
+  - trigger: state
+    entity_id: !input services
+    from: "off"
+    to: "on"
+    id: up
+
+variables:
+  recovery: !input notify_recovery
+  delay_input: !input delay
+  delay_seconds: >-
+    {{ (delay_input.hours | default(0) | int) * 3600
+       + (delay_input.minutes | default(0) | int) * 60
+       + (delay_input.seconds | default(0) | int) }}
+  service_name: >-
+    {{ state_attr(trigger.entity_id, 'service_name') or trigger.to_state.name }}
+  message: "{{ state_attr(trigger.entity_id, 'message') }}"
+
+actions:
+  - choose:
+      - conditions:
+          - condition: template
+            value_template: "{{ trigger.id == 'down' }}"
+        sequence:
+          - domain: mobile_app
+            type: notify
+            device_id: !input notify_device
+            title: "⚠️ {{ service_name }} ausgefallen"
+            message: "{{ message }}"
+      # "Wieder da" nur melden, wenn vorher auch der Ausfall gemeldet wurde
+      - conditions:
+          - condition: template
+            value_template: >-
+              {{ trigger.id == 'up' and recovery
+                 and (as_timestamp(trigger.to_state.last_changed)
+                      - as_timestamp(trigger.from_state.last_changed)) >= delay_seconds }}
+        sequence:
+          - domain: mobile_app
+            type: notify
+            device_id: !input notify_device
+            title: "✅ {{ service_name }} läuft wieder"
+            message: "{{ message }}"

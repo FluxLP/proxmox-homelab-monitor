@@ -7,6 +7,7 @@
 - **`sensor.<gast>_response_time`:** Antwortzeit in ms, mit Verlauf
 - **`binary_sensor.<gast>_service`:** Gesamtstatus für jeden Container/jede VM: läuft *und* Domain erreichbar. Attribute `problem` (`offline`, `unavailable`, `domain`) und `message` für Benachrichtigungen
 - **`sensor.homelab_<node>_problems`:** Anzahl der Dienste mit Problem, Liste als Attribut
+- **Benachrichtigungen:** Blueprint [`blueprints/service_alert.yaml`](blueprints/service_alert.yaml) – Push aufs Handy bei Ausfall (mit Verzögerung gegen Fehlalarme) und optional, wenn der Dienst wieder läuft. Import: *Einstellungen → Automationen & Szenen → Blueprints → Blueprint importieren* → `https://github.com/FluxLP/proxmox-homelab-monitor/blob/main/blueprints/service_alert.yaml`
 - Prüfung serverseitig rund um die Uhr; einstellbar sind Intervall, Zeitlimit, Zertifikatsprüfung und wie viele Fehlschläge hintereinander als „nicht erreichbar“ zählen (gegen Fehlalarme)
 
 Passende Lovelace-Karten: [Homelab Status Card](https://github.com/FluxLP/homelab-status-card) und [Homelab Status Compact](https://github.com/FluxLP/homelab-status-compact).
