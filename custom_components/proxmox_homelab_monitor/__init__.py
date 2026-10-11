@@ -44,6 +44,7 @@ from requests.exceptions import (
 from urllib3.exceptions import InsecureRequestWarning
 
 from .api import ProxmoxClient, auth_error_status, get_api
+from .homelab import async_setup_homelab
 from .const import (
     CONF_AUTO_DISCOVERY,
     CONF_CLUSTER_HOSTS,
@@ -1364,6 +1365,9 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
             node=node,
             create=True,
         )
+
+    # Homelab: Domain-Prüfung, Dienst-Gesamtstatus, Problem-Übersicht
+    await async_setup_homelab(hass, config_entry)
 
     await hass.config_entries.async_forward_entry_setups(config_entry, PLATFORMS)
 

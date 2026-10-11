@@ -26,6 +26,7 @@ from .const import (
     ProxmoxType,
 )
 from .discovery import selected
+from .homelab import homelab_guest_key, homelab_binary_sensors
 from .entity import ProxmoxEntity, ProxmoxEntityDescription
 
 if TYPE_CHECKING:
@@ -249,6 +250,7 @@ async def async_setup_entry(
     async_add_entities(await async_setup_binary_sensors_ha_status(hass, config_entry))
     async_add_entities(await async_setup_binary_sensors_replication(hass, config_entry))
     async_add_entities(await async_setup_binary_sensors_backup(hass, config_entry))
+    async_add_entities(homelab_binary_sensors(config_entry))
 
     async def _async_add_resource(api_category: ProxmoxType, resource_id: str) -> None:
         """Build the binary sensors of a resource discovery found at runtime."""
@@ -269,6 +271,8 @@ async def async_setup_entry(
             entities = await async_setup_binary_sensors_storages(
                 hass, config_entry, only
             )
+        if (homelab_key := homelab_guest_key(api_category, resource_id)) is not None:
+            entities = [*entities, *homelab_binary_sensors(config_entry, homelab_key)]
         async_add_entities(entities)
 
     config_entry.runtime_data[RESOURCE_CALLBACKS].append(_async_add_resource)

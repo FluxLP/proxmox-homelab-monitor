@@ -139,7 +139,9 @@
                     "host_auth": "Host-Authentifizierungsinformationen ändern",
                     "change_expose": "Nodes, VMs oder Container hinzufügen oder entfernen",
                     "advanced": "Advanced configuration: polling, physical disks, tasks, updates, backups, entity ids",
-                    "cluster_ha_auth": "Optional: cluster HA administration (advanced)"
+                    "cluster_ha_auth": "Optional: cluster HA administration (advanced)",
+                    "homelab_domains": "Domains der Dienste",
+                    "homelab_settings": "Domain-Überwachung (Einstellungen)"
                 }
             },
             "host_auth": {
@@ -201,6 +203,26 @@
                     "entity_id_scheme": "Standard: Home Assistant's device then name, `qemu_win11_108_cpu_used`. Extended: prefix, kind, id, name, item - `pve_qemu_108_win11_cpu_used` - so a search or a recorder filter catches everything by the prefix and a list sorts by id. Applies to entities created from now on; ids that exist keep them.",
                     "entity_id_prefix": "The first part of every entity id under the extended scheme; `pve` unless you choose otherwise. Not used by the standard scheme."
                 }
+            },
+            "homelab_domains": {
+                "title": "Domains der Dienste",
+                "description": "Trage für jeden Container und jede VM die Domain ein, unter der der Dienst erreichbar ist, z. B. `jellyfin.example.org` oder eine vollständige URL. Leer lassen, wenn der Dienst keine Domain hat.\n\nFür jeden Eintrag entstehen die Entitäten **Domain** und **Antwortzeit**. Die Entität **Dienst** (läuft und Domain erreichbar) gibt es für jeden Container und jede VM."
+            },
+            "homelab_settings": {
+                "title": "Domain-Überwachung",
+                "description": "Wie die Domains geprüft werden. HTTP 1xx–4xx gilt als erreichbar (auch Login-Seiten mit 401/403), 5xx, Zeitüberschreitung, DNS- oder Zertifikatsfehler als nicht erreichbar.",
+                "data": {
+                    "homelab_interval": "Prüfintervall",
+                    "homelab_timeout": "Zeitlimit pro Prüfung",
+                    "homelab_failure_threshold": "Fehlschläge bis „nicht erreichbar“",
+                    "homelab_verify_ssl": "Zertifikat prüfen"
+                },
+                "data_description": {
+                    "homelab_interval": "Wie oft alle Domains geprüft werden.",
+                    "homelab_timeout": "Wie lange auf eine Antwort gewartet wird.",
+                    "homelab_failure_threshold": "Erst nach so vielen Fehlschlägen hintereinander gilt eine Domain als nicht erreichbar. Verhindert Benachrichtigungen bei kurzen Aussetzern.",
+                    "homelab_verify_ssl": "Ausschalten nur bei selbstsignierten Zertifikaten."
+                }
             }
         },
         "error": {
@@ -220,7 +242,8 @@
             "cant_connect": "Verbindung fehlgeschlagen",
             "general_error": "Unerwarteter Fehler",
             "invalid_port": "Ungültige Portnummer",
-            "ssl_rejection": "SSL-Zertifikat konnte nicht verifiziert werden"
+            "ssl_rejection": "SSL-Zertifikat konnte nicht verifiziert werden",
+            "homelab_not_loaded": "Die Integration muss geladen sein, damit die Container und VMs angezeigt werden können."
         }
     },
     "entity": {
@@ -297,6 +320,12 @@
                         "name": "User"
                     }
                 }
+            },
+            "service": {
+                "name": "Dienst"
+            },
+            "domain": {
+                "name": "Domain"
             }
         },
         "button": {
@@ -762,6 +791,12 @@
                     "offline": "Offline",
                     "unknown": "Unknown"
                 }
+            },
+            "response_time": {
+                "name": "Antwortzeit"
+            },
+            "problems": {
+                "name": "Probleme"
             }
         },
         "update": {

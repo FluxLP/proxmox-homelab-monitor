@@ -1,7 +1,7 @@
 backup:
   target:
     entity:
-      integration: proxmoxve
+      integration: proxmox_homelab_monitor
   fields:
     node:
       example: "pve"

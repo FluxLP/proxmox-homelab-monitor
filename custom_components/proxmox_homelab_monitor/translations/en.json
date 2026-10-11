@@ -134,8 +134,12 @@
     },
     "options": {
       "step": {
+        "homelab_domains": {"title": "Service domains", "description": "Enter the domain each container and VM is reachable at, e.g. `jellyfin.example.org` or a full URL. Leave empty if the service has no domain.\n\nEach entry adds a **Domain** and a **Response time** entity. The **Service** entity (running and domain reachable) exists for every container and VM."},
+        "homelab_settings": {"title": "Domain monitoring", "description": "How domains are checked. HTTP 1xx–4xx counts as reachable (including login pages with 401/403); 5xx, timeouts, DNS or certificate errors count as unreachable.", "data": {"homelab_interval": "Check interval", "homelab_timeout": "Timeout per check", "homelab_failure_threshold": "Failures before unreachable", "homelab_verify_ssl": "Verify certificate"}, "data_description": {"homelab_interval": "How often all domains are checked.", "homelab_timeout": "How long to wait for an answer.", "homelab_failure_threshold": "A domain only counts as unreachable after this many failed checks in a row. Avoids notifications for short hiccups.", "homelab_verify_ssl": "Turn off only for self-signed certificates."}},
         "menu": {
           "menu_options": {
+            "homelab_domains": "Service domains",
+            "homelab_settings": "Domain monitoring (settings)",
             "host_auth": "Change host authentication information",
             "change_expose": "Add or remove Nodes, VMs, Containers or Storages",
             "advanced": "Advanced configuration: polling, physical disks, tasks, updates, backups, entity ids",
@@ -211,6 +215,7 @@
         "ssl_rejection": "Could not verify the SSL certificate"
       },
       "abort": {
+        "homelab_not_loaded": "The integration has to be loaded to list the containers and VMs.",
         "no_nodes": "No nodes were returned for the host.",
         "no_vms": "There are no virtual machines or containers for this node, the configuration entry will be created for the node.",
         "changes_successful": "Changes saved successfully.",
@@ -225,6 +230,8 @@
     },
     "entity": {
       "binary_sensor": {
+        "service": {"name": "Service"},
+        "domain": {"name": "Domain"},
         "status": {
           "name": "Status"
         },
@@ -353,6 +360,8 @@
         }
       },
       "sensor": {
+        "response_time": {"name": "Response time"},
+        "problems": {"name": "Problems"},
         "cpu_used": {
           "name": "CPU used",
           "state_attributes": {

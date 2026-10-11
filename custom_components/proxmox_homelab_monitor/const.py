@@ -5,7 +5,7 @@
 import logging
 from enum import StrEnum
 
-DOMAIN = "proxmoxve"
+DOMAIN = "proxmox_homelab_monitor"
 PROXMOX_CLIENTS = "proxmox_clients"
 CONF_TOKEN_NAME = "token_name"
 CONF_REALM = "realm"

@@ -4,13 +4,13 @@ Ready-made automations for the integration. Import one, fill in the fields, done
 
 ## Scheduled backup
 
-Backs up the Proxmox devices you pick at a set time on the days you choose, through the [`proxmoxve.backup` action](../docs/actions.md#the-proxmoxvebackup-action) - the way *Backup now* in the Proxmox interface does, but on a schedule kept in Home Assistant. A VM or container device backs up that guest, a node device everything it hosts, the `Proxmox Cluster` device everything on every node; the node each guest lives on is looked up, so one automation can cover the whole cluster. Nodes with a backup already running are left out rather than queued behind it, and a notification says what started.
+Backs up the Proxmox devices you pick at a set time on the days you choose, through the [`proxmox_homelab_monitor.backup` action](../docs/actions.md#the-proxmoxvebackup-action) - the way *Backup now* in the Proxmox interface does, but on a schedule kept in Home Assistant. A VM or container device backs up that guest, a node device everything it hosts, the `Proxmox Cluster` device everything on every node; the node each guest lives on is looked up, so one automation can cover the whole cluster. Nodes with a backup already running are left out rather than queued behind it, and a notification says what started.
 
 The credentials need `VM.Backup` on the guests and `Datastore.AllocateSpace` on the storage, see [Proxmox permissions](../docs/permissions.md).
 
-[![Open your Home Assistant instance and show the blueprint import dialog with a specific blueprint pre-filled.](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https://github.com/dougiteixeira/proxmoxve/blob/main/blueprints/backup_scheduled.yaml)
+[![Open your Home Assistant instance and show the blueprint import dialog with a specific blueprint pre-filled.](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https://github.com/FluxLP/proxmox-homelab-monitor/blob/main/blueprints/backup_scheduled.yaml)
 
-Or import `https://github.com/dougiteixeira/proxmoxve/blob/main/blueprints/backup_scheduled.yaml` by hand under [Settings > Automations & Scenes > Blueprints](https://my.home-assistant.io/redirect/blueprints/) > Import Blueprint, then create an automation from it.
+Or import `https://github.com/FluxLP/proxmox-homelab-monitor/blob/main/blueprints/backup_scheduled.yaml` by hand under [Settings > Automations & Scenes > Blueprints](https://my.home-assistant.io/redirect/blueprints/) > Import Blueprint, then create an automation from it.
 
 ### Filling in the fields
 

@@ -2,14 +2,14 @@ blueprint:
   name: Proxmox - Scheduled backup
   description: >-
     Backs up the Proxmox guests, nodes or cluster you pick at a set time on
-    the chosen days, through the `proxmoxve.backup` action - the way *Backup
+    the chosen days, through the `proxmox_homelab_monitor.backup` action - the way *Backup
     now* in the Proxmox interface does, but on a schedule you keep in Home
     Assistant. A guest device backs up that guest, a node device everything
     on the node, the cluster device everything on every node; the node each
     guest lives on is looked up. Nodes with a backup already running can be
     left out, and a notification says what started.
   domain: automation
-  source_url: https://github.com/dougiteixeira/proxmoxve/blob/main/blueprints/backup_scheduled.yaml
+  source_url: https://github.com/FluxLP/proxmox-homelab-monitor/blob/main/blueprints/backup_scheduled.yaml
   homeassistant:
     min_version: 2024.10.0
   input:
@@ -23,7 +23,7 @@ blueprint:
         device:
           multiple: true
           filter:
-            integration: proxmoxve
+            integration: proxmox_homelab_monitor
     at:
       name: Time
       description: When the run starts.
@@ -132,7 +132,7 @@ conditions:
     weekday: !input weekdays
 
 actions:
-  - action: proxmoxve.backup
+  - action: proxmox_homelab_monitor.backup
     target:
       device_id: !input targets
     data: >-

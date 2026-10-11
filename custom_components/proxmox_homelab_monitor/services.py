@@ -3,7 +3,7 @@
 """
 Actions the integration offers beyond its buttons.
 
-`proxmoxve.backup` starts `vzdump` runs the way the Proxmox interface's
+`proxmox_homelab_monitor.backup` starts `vzdump` runs the way the Proxmox interface's
 Backup Now does: one API call per node, the node does the rest, and the
 run shows up in the task log where the backup sensors already look. What
 to back up is said the Home Assistant way - the guest, node or cluster

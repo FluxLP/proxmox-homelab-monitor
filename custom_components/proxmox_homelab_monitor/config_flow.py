@@ -25,6 +25,7 @@ from homeassistant.helpers import selector
 from requests.exceptions import ConnectTimeout, SSLError
 
 from .api import ProxmoxClient, get_api
+from . import homelab
 from .const import (
     CONF_AUTO_DISCOVERY,
     CONF_BACKUP_STORAGE,
@@ -156,12 +157,26 @@ class ProxmoxOptionsFlowHandler(config_entries.OptionsFlow):
         return self.async_show_menu(
             step_id="menu",
             menu_options=[
+                "homelab_domains",
+                "homelab_settings",
                 "host_auth",
                 "change_expose",
                 "advanced",
                 "cluster_ha_auth",
             ],
         )
+
+    async def async_step_homelab_domains(
+        self, user_input: dict[str, Any] | None = None
+    ) -> FlowResult:
+        """Homelab: the domain of every container and VM."""
+        return await homelab.async_step_homelab_domains(self, user_input)
+
+    async def async_step_homelab_settings(
+        self, user_input: dict[str, Any] | None = None
+    ) -> FlowResult:
+        """Homelab: how the domains are checked."""
+        return await homelab.async_step_homelab_settings(self, user_input)
 
     async def async_step_host_auth(self, user_input: dict[str, Any]) -> FlowResult:
         """Manage the host options step for proxmoxve config flow."""
